@@ -1,0 +1,22 @@
+[project]
+name = "magcomm"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Ling-YangHui", email = "2411046022@qq.com" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+magcomm = "magcomm:main"
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.workspace]
+members = [
+    "magcomm",
+]
