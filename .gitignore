@@ -11,3 +11,6 @@ wheels/
 
 *.pdf
 *.html
+
+# Large binary artifacts
+*.pkl

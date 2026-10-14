@@ -13,7 +13,9 @@ class Coil:
                 frequency: float,               # 线圈的工作频率
                 current: float = 0.0,           # 线圈的工作电流
                 towards: str = 'z',             # 线圈的轴朝向（'x', 'y', 'z'）
-                phi_axis: str = 'x',            # 极坐标系下的 phi 轴朝向（'x', 'y', 'z'）   
+                phi_axis: str = 'x',            # 极坐标系下的 phi 轴朝向（'x', 'y', 'z'） 
+                real_line: bool = False,        # 线圈的线径是否为真实线径
+                line_radius: float = 0.0,       # 线圈的线径半径  
                 center_position: np.ndarray = np.zeros(3)   # 线圈的中心位置
                 ):
         """
@@ -49,6 +51,8 @@ class Coil:
         self.length = length
         self.has_mag_bar = has_mag_bar
         self.mag_bar_radius = mag_bar_radius
+        self.line_radius = line_radius
+        self.real_line = real_line
 
         # 位置参数
         self.towards = towards
@@ -62,8 +66,16 @@ class Coil:
         self.outer_radius = self.inner_radius + self.radius_width                   # 线圈的外半径
         self.mid_radius = np.sqrt(self.inner_radius * self.outer_radius)            # 线圈的中半径
         self.line_length = 2 * np.pi * self.mid_radius * self.turns                 # 线圈的线长
-        self.line_area = self.radius_width * self.length / self.turns               # 线圈的线截面积
-        self.resistance = Const.pho_copper * self.line_length / self.line_area      # 线圈的电阻
+        if self.real_line:
+            skin_depth = np.sqrt(Const.pho_copper / (np.pi * frequency * Const.mu0))
+            if self.line_radius > skin_depth:
+                self.line_area = np.pi * line_radius**2 - np.pi * (line_radius - skin_depth)**2
+            else:
+                self.line_area = np.pi * line_radius**2
+            self.resistance = Const.pho_copper * self.line_length / self.line_area
+        else:
+            self.line_area = self.radius_width * self.length / self.turns               # 线圈的线截面积
+            self.resistance = Const.pho_copper * self.line_length / self.line_area      # 线圈的电阻
 
         self.mu_eff_compensate = 1                                                  # 线圈的有效磁导率补偿系数
 
@@ -180,6 +192,23 @@ class Coil:
             inductance = self.inductance
         return 1 / (4 * np.pi**2 * self.frequency**2 * inductance)
 
+    def calculate_mutual_inductance(self, other_coil):
+        """
+        计算线圈与另一个线圈的互感
+
+        Parameters
+        ----------
+        other_coil : Coil
+            另一个线圈对象
+
+        Returns
+        -------
+        float
+            互感
+        """
+        v_induced = self.calculate_induced_voltage_to_another_coil(other_coil)
+        return v_induced / (2 * np.pi * self.frequency * self.current)
+
 class OGCoil(Coil):
     def __init__(self,
                 turns=32,
@@ -192,8 +221,10 @@ class OGCoil(Coil):
                 current=10,
                 towards='z',
                 phi_axis='x',
-                center_position=np.zeros(3)):
-        super().__init__(turns, inner_radius, radius_width, length, has_mag_bar, mag_bar_radius, frequency, current, towards, phi_axis, center_position)
+                center_position=np.zeros(3),
+                real_line=False,
+                line_radius=0.0):
+        super().__init__(turns, inner_radius, radius_width, length, has_mag_bar, mag_bar_radius, frequency, current, towards, phi_axis, real_line, line_radius, center_position)
 
 class UGCoil(Coil):
     def __init__(self,
@@ -207,8 +238,10 @@ class UGCoil(Coil):
                 current=0.1,
                 towards='z',
                 phi_axis='x',
-                center_position=np.zeros(3)):
-        super().__init__(turns, inner_radius, radius_width, length, has_mag_bar, mag_bar_radius, frequency, current, towards, phi_axis, center_position)
+                center_position=np.zeros(3),
+                real_line=False,
+                line_radius=0.0005):
+        super().__init__(turns, inner_radius, radius_width, length, has_mag_bar, mag_bar_radius, frequency, current, towards, phi_axis, real_line, line_radius, center_position)
 
 class UVCoil(Coil):
     def __init__(self,
@@ -222,5 +255,7 @@ class UVCoil(Coil):
                 current=1,
                 towards='z',
                 phi_axis='x',
-                center_position=np.zeros(3)):
-        super().__init__(turns, inner_radius, radius_width, length, has_mag_bar, mag_bar_radius, frequency, current, towards, phi_axis, center_position)
+                center_position=np.zeros(3), 
+                real_line=False,
+                line_radius=0.0005):
+        super().__init__(turns, inner_radius, radius_width, length, has_mag_bar, mag_bar_radius, frequency, current, towards, phi_axis, real_line, line_radius, center_position)
